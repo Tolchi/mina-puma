@@ -21,64 +21,78 @@ namespace :puma do
   task start: :remote_environment do
     puma_port_option = "-p #{fetch(:puma_port)}" if set?(:puma_port)
 
-    comment "Starting Puma..."
-    command %[
+    comment 'Starting Puma...'
+    command %(
       if [ -e "#{fetch(:pumactl_socket)}" ]; then
         echo 'Puma is already running!';
       else
         if [ -e "#{fetch(:puma_config)}" ]; then
-          cd #{fetch(:puma_root_path)} && #{fetch(:puma_cmd)} -q -d -e #{fetch(:puma_env)} -C #{fetch(:puma_config)}
+          cd #{fetch(:puma_root_path)} &&
+          #{fetch(:puma_cmd)} -q -e #{fetch(:puma_env)}
+          -C #{fetch(:puma_config)}
         else
-          cd #{fetch(:puma_root_path)} && #{fetch(:puma_cmd)} -q -d -e #{fetch(:puma_env)} -b "unix://#{fetch(:puma_socket)}" #{puma_port_option} -S #{fetch(:puma_state)} --pidfile #{fetch(:puma_pid)} --control 'unix://#{fetch(:pumactl_socket)}' --redirect-stdout "#{fetch(:puma_stdout)}" --redirect-stderr "#{fetch(:puma_stderr)}"
+          cd #{fetch(:puma_root_path)} &&
+             #{fetch(:puma_cmd)} -q -e #{fetch(:puma_env)}
+             -b "unix://#{fetch(:puma_socket)}" #{puma_port_option}
+             -S #{fetch(:puma_state)}
+             --pidfile #{fetch(:puma_pid)}
+             --control 'unix://#{fetch(:pumactl_socket)}'
+             --redirect-stdout "#{fetch(:puma_stdout)}"
+             --redirect-stderr "#{fetch(:puma_stderr)}"
         fi
       fi
-    ]
+    )
   end
 
   desc 'Stop puma'
   task stop: :remote_environment do
-    comment "Stopping Puma..."
+    comment 'Stopping Puma...'
     pumactl_command 'stop'
-    command %[rm -f '#{fetch(:pumactl_socket)}']
+    command %(rm -f '#{fetch(:pumactl_socket)}')
   end
 
   desc 'Restart puma'
   task restart: :remote_environment do
-    comment "Restart Puma...."
+    comment 'Restart Puma....'
     pumactl_command 'restart'
   end
 
   desc 'Restart puma (phased restart)'
   task phased_restart: :remote_environment do
-    comment "Restart Puma -- phased..."
+    comment 'Restart Puma -- phased...'
     pumactl_command 'phased-restart'
   end
 
   desc 'Restart puma (hard restart)'
   task hard_restart: :remote_environment do
-    comment "Restart Puma -- hard..."
+    comment 'Restart Puma -- hard...'
     invoke 'puma:stop'
     invoke 'puma:start'
   end
 
   desc 'Get status of puma'
   task status: :remote_environment do
-    comment "Puma status..."
+    comment 'Puma status...'
     pumactl_command 'status'
   end
 
   def pumactl_command(command)
-    cmd =  %{
+    cmd =  %(
       if [ -e "#{fetch(:pumactl_socket)}" ]; then
         if [ -e "#{fetch(:puma_config)}" ]; then
-          cd #{fetch(:puma_root_path)} && #{fetch(:pumactl_cmd)} -F #{fetch(:puma_config)} #{command}
+          cd #{fetch(:puma_root_path)} &&
+          #{fetch(:pumactl_cmd)}
+          -F #{fetch(:puma_config)} #{command}
         else
-          cd #{fetch(:puma_root_path)} && #{fetch(:pumactl_cmd)} -S #{fetch(:puma_state)} -C "unix://#{fetch(:pumactl_socket)}" --pidfile #{fetch(:puma_pid)} #{command}
+          cd #{fetch(:puma_root_path)} &&
+          #{fetch(:pumactl_cmd)} -S #{fetch(:puma_state)}
+          -C "unix://#{fetch(:pumactl_socket)}"
+          --pidfile #{fetch(:puma_pid)} #{command}
         fi
       else
         echo 'Puma is not running!';
       fi
-    }
+    )
     command cmd
   end
 end
